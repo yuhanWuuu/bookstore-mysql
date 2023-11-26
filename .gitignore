@@ -1,7 +1,8 @@
 **/.idea/
 __pycache__/
-**/__pycache__
-/.gitattributes
-/.coverage
-/.log
-/.db
+.pytest_cache/
+pytest_*.xml
+*.gitattributes
+*.coverage
+*.log
+*.db
