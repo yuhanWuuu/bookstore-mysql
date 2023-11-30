@@ -1,4 +1,4 @@
-import sqlite3 as sqlite
+import pymysql
 from be.model import error
 from be.model import db_conn
 
@@ -24,12 +24,13 @@ class Seller(db_conn.DBConn):
                 return error.error_exist_book_id(book_id)
 
             self.cur.execute(
-                "INSERT into store(store_id, book_id, book_info, stock_level)"
+                "INSERT INTO store(store_id, book_id, book_info, stock_level)"
                 "VALUES (%s, %s, %s, %s)",
                 (store_id, book_id, book_json_str, stock_level),
             )
             self.cur.connection.commit()
-        except sqlite.Error as e:
+        except pymysql.Error as e:
+            # print(e)
             return 528, "{}".format(str(e))
         except BaseException as e:
             return 530, "{}".format(str(e))
@@ -52,7 +53,7 @@ class Seller(db_conn.DBConn):
                 (add_stock_level, store_id, book_id),
             )
             self.cur.connection.commit()
-        except sqlite.Error as e:
+        except pymysql.Error as e:
             return 528, "{}".format(str(e))
         except BaseException as e:
             return 530, "{}".format(str(e))
@@ -69,7 +70,7 @@ class Seller(db_conn.DBConn):
                 (store_id, user_id),
             )
             self.cur.connection.commit()
-        except sqlite.Error as e:
+        except pymysql.Error as e:
             return 528, "{}".format(str(e))
         except BaseException as e:
             return 530, "{}".format(str(e))

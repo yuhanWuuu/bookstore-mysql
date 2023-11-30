@@ -70,7 +70,7 @@ class User(db_conn.DBConn):
 
     def check_token(self, user_id: str, token: str) -> (int, str):
         self.cur.execute("SELECT token from user where user_id=%s", (user_id,))
-        row = cursor.fetchone()
+        row = self.cur.fetchone()
         if row is None:
             return error.error_authorization_fail()
         db_token = row[0]

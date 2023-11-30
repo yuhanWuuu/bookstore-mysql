@@ -19,7 +19,6 @@ class TestAddBook:
         assert code == 200
         book_db = book.BookDB(conf.Use_Large_DB)
         self.books = book_db.get_book_info(0, 2)
-
         yield
         # do after test
 
