@@ -1,7 +1,5 @@
 import logging
 import os
-import sqlite3 as sqlite
-import pymysql
 import pymysql
 
 
@@ -17,7 +15,7 @@ class Store:
             cur = self.get_db_conn()
 
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS users(
+                CREATE TABLE IF NOT EXISTS `user`(
                     user_id VARCHAR(100) PRIMARY KEY,
                     password VARCHAR(100) NOT NULL,
                     balance INT NOT NULL,
@@ -26,18 +24,9 @@ class Store:
                 )
             """)
 
-            # cur.execute("""
-            #     CREATE TABLE IF NOT EXISTS user_store(
-            #         user_id TEXT,
-            #         store_id,
-            #         PRIMARY KEY(user_id, store_id)
-            #     )
-            # """)
-
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS stores(
+                CREATE TABLE IF NOT EXISTS store(
                     store_id VARCHAR(100),
-                    user_id VARCHAR(100),
                     book_id VARCHAR(100),
                     book_info TEXT,
                     stock_level INT,
@@ -45,19 +34,25 @@ class Store:
                 )
             """)
 
-            # cur.execute("""
-            #     CREATE TABLE IF NOT EXISTS new_order(
-            #         order_id TEXT PRIMARY KEY,
-            #         user_id TEXT,
-            #         store_id TEXT,
-            #         TTL DATETIME
-            #     )
-            # """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS user_store(
+                    user_id VARCHAR(100),
+                    store_id VARCHAR(100),
+                    PRIMARY KEY(user_id, store_id)
+                )
+            """)
 
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS orders(
-                    order_id VARCHAR(200),
+                CREATE TABLE IF NOT EXISTS new_order(
+                    order_id VARCHAR(200) PRIMARY KEY,
                     user_id VARCHAR(100),
+                    store_id VARCHAR(100)
+                )
+            """)
+
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS new_order_detail(
+                    order_id VARCHAR(200),
                     book_id VARCHAR(100),
                     count INT,
                     price INT,
@@ -75,7 +70,7 @@ class Store:
 
     def get_db_conn(self):
         # return sqlite.connect(self.database)
-        db = pymysql.connect(host='localhost', user='root', passwd='root', port=3306)
+        db = pymysql.connect(host='localhost', user='root', passwd='root', port=3306, database='bookstore')
         return db.cursor()
 
 
