@@ -13,7 +13,7 @@ class Buyer(db_conn.DBConn):
         db_conn.DBConn.__init__(self)
 
     def new_order(
-        self, user_id: str, store_id: str, id_and_count: [(str, int)]
+            self, user_id: str, store_id: str, id_and_count: [(str, int)]
     ) -> (int, str, str):
         order_id = ""
         try:
@@ -58,7 +58,7 @@ class Buyer(db_conn.DBConn):
             self.cur.execute(
                 "INSERT INTO new_order(order_id, store_id, user_id, status, completion_time, TTL) "
                 "VALUES(%s, %s, %s, %s, %s, %s);",
-                (uid, store_id, user_id, "待支付", None, datetime.now()+timedelta(hours=1)),
+                (uid, store_id, user_id, "待支付", None, datetime.now() + timedelta(hours=1)),
             )
             self.cur.connection.commit()
             order_id = uid
@@ -220,9 +220,64 @@ class Buyer(db_conn.DBConn):
                 return 524, {"请等待快递送出"}
 
             self.cur.execute(
-                "UPDATE new_order SET status = %s, completion_time=%s"
-                "WHERE order_id = %s",
+                "UPDATE new_order SET status = %s, completion_time=%s "
+                "WHERE order_id = %s ",
                 ('已完成', datetime.now().strftime('%Y-%m-%d %H:%M:%S'), order_id),
+            )
+            self.cur.connection.commit()
+
+        except pymysql.Error as e:
+            return 528, "{}".format(str(e))
+        except BaseException as e:
+            return 530, "{}".format(str(e))
+        return 200, "ok"
+
+    def cancel_order(self, user_id: str, password: str, order_id: str):
+        try:
+            self.cur.execute(
+                "SELECT password from user where user_id=%s", (user_id,)
+            )
+            row = self.cur.fetchone()
+            if row is None:
+                return error.error_authorization_fail()
+            if password != row[0]:
+                return error.error_authorization_fail()
+
+            self.cur.execute(
+                "SELECT order_id, store_id, status FROM new_order WHERE order_id = %s",
+                (order_id,),
+            )
+            row = self.cur.fetchone()
+            if row is None:
+                return error.error_invalid_order_id(order_id)
+
+            status = row[2]
+            store_id = row[1]
+            if status != "待支付":
+                return 525, {"已支付，无法取消订单"}
+
+            self.cur.execute(
+                "SELECT book_id, count FROM new_order_detail WHERE order_id = %s",
+                (order_id,),
+            )
+
+            for row in self.cur.fetchall():
+                book_id = row[0]
+                count = row[1]
+                self.cur.execute(
+                    "UPDATE store SET stock_level = stock_level + %s "
+                    "WHERE store_id=%s AND book_id=%s ",
+                    (count, store_id, book_id),
+                )
+            self.cur.connection.commit()
+
+            self.cur.execute(
+                "DELETE FROM new_order_detail WHERE order_id=%s;",
+                (order_id,),
+            )
+            self.cur.execute(
+                "DELETE FROM new_order WHERE order_id=%s;",
+                (order_id,),
             )
             self.cur.connection.commit()
 
