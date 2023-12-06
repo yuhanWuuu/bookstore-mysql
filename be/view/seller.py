@@ -22,7 +22,7 @@ def seller_add_book():
     store_id: str = request.json.get("store_id")
     book_info: dict = request.json.get("book_info")
     stock_level: str = request.json.get("stock_level", 0)
-    book_info['pictures'] = []  # 图片太长了，去掉
+    # book_info['pictures'] = []  # 图片太长了，去掉
     s = seller.Seller()
     code, message = s.add_book(
         user_id, store_id, book_info.get("id"), json.dumps(book_info), stock_level
@@ -40,5 +40,17 @@ def add_stock_level():
 
     s = seller.Seller()
     code, message = s.add_stock_level(user_id, store_id, book_id, add_num)
+
+    return jsonify({"message": message}), code
+
+
+@bp_seller.route("/deliver_goods", methods=["POST"])
+def deliver_goods():
+    user_id: str = request.json.get("user_id")
+    store_id: str = request.json.get("store_id")
+    order_id: str = request.json.get("order_id")
+
+    s = seller.Seller()
+    code, message = s.deliver_goods(user_id, store_id, order_id)
 
     return jsonify({"message": message}), code

@@ -28,7 +28,7 @@ class Store:
                 CREATE TABLE IF NOT EXISTS store(
                     store_id VARCHAR(100),
                     book_id VARCHAR(100),
-                    book_info TEXT,
+                    book_info LONGTEXT,
                     stock_level INT,
                     PRIMARY KEY(store_id, book_id)
                 )
@@ -46,7 +46,10 @@ class Store:
                 CREATE TABLE IF NOT EXISTS new_order(
                     order_id VARCHAR(200) PRIMARY KEY,
                     user_id VARCHAR(100),
-                    store_id VARCHAR(100)
+                    store_id VARCHAR(100),
+                    status VARCHAR(9),
+                    completion_time DATE,
+                    TTL DATETIME
                 )
             """)
 
@@ -56,9 +59,6 @@ class Store:
                     book_id VARCHAR(100),
                     count INT,
                     price INT,
-                    status VARCHAR(9),
-                    completion_time DATE,
-                    TTL DATETIME,
                     PRIMARY KEY(order_id, book_id)
                 )
             """)

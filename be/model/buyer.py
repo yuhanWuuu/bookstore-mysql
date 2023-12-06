@@ -50,15 +50,15 @@ class Buyer(db_conn.DBConn):
                     return error.error_stock_level_low(book_id) + (order_id,)
 
                 self.cur.execute(
-                    "INSERT INTO new_order_detail(order_id, book_id, count, price, status, completion_time, TTL) "
-                    "VALUES(%s, %s, %s, %s, %s, %s, %s);",
-                    (uid, book_id, count, price, "待付款", None, datetime.now()+timedelta(hours=1)),
+                    "INSERT INTO new_order_detail(order_id, book_id, count, price) "
+                    "VALUES(%s, %s, %s, %s);",
+                    (uid, book_id, count, price),
                 )
 
             self.cur.execute(
-                "INSERT INTO new_order(order_id, store_id, user_id) "
-                "VALUES(%s, %s, %s);",
-                (uid, store_id, user_id),
+                "INSERT INTO new_order(order_id, store_id, user_id, status, completion_time, TTL) "
+                "VALUES(%s, %s, %s, %s, %s, %s);",
+                (uid, store_id, user_id, "待支付", None, datetime.now()+timedelta(hours=1)),
             )
             self.cur.connection.commit()
             order_id = uid
@@ -75,7 +75,7 @@ class Buyer(db_conn.DBConn):
         cur = self.cur
         try:
             cur.execute(
-                "SELECT order_id, user_id, store_id FROM new_order WHERE order_id = %s",
+                "SELECT order_id, user_id, store_id, status FROM new_order WHERE order_id = %s",
                 (order_id,),
             )
             row = cur.fetchone()
@@ -85,6 +85,11 @@ class Buyer(db_conn.DBConn):
             order_id = row[0]
             buyer_id = row[1]
             store_id = row[2]
+            status = row[3]
+
+            # 查看status
+            if status != "待支付":
+                return 520, f"already paid order id {order_id}"  # 已支付的订单
 
             if buyer_id != user_id:
                 return error.error_authorization_fail()
@@ -133,26 +138,24 @@ class Buyer(db_conn.DBConn):
             if cur.rowcount == 0:
                 return error.error_not_sufficient_funds(order_id)
 
+            # 更新状态
+            cur.execute(
+                "UPDATE new_order set status = %s, TTL = %s "
+                "WHERE order_id = %s ",
+                ('待发货', None, order_id),
+            )
+
             # cur.execute(
-            #     "UPDATE user set balance = balance + %s "
-            #     "WHERE user_id = %s",
-            #     (total_price, buyer_id),
+            #     "DELETE FROM new_order WHERE order_id = %s ", (order_id,)
             # )
-            #
             # if cur.rowcount == 0:
-            #     return error.error_non_exist_user_id(buyer_id)
-
-            cur.execute(
-                "DELETE FROM new_order WHERE order_id = %s ", (order_id,)
-            )
-            if cur.rowcount == 0:
-                return error.error_invalid_order_id(order_id)
-
-            cur.execute(
-                "DELETE FROM new_order_detail where order_id = %s ", (order_id,)
-            )
-            if cur.rowcount == 0:
-                return error.error_invalid_order_id(order_id)
+            #     return error.error_invalid_order_id(order_id)
+            #
+            # cur.execute(
+            #     "DELETE FROM new_order_detail where order_id = %s ", (order_id,)
+            # )
+            # if cur.rowcount == 0:
+            #     return error.error_invalid_order_id(order_id)
 
             cur.connection.commit()
 
