@@ -48,7 +48,7 @@ class Store:
                     user_id VARCHAR(100),
                     store_id VARCHAR(100),
                     status VARCHAR(9),
-                    completion_time DATE,
+                    completion_time DATETIME,
                     TTL DATETIME
                 )
             """)

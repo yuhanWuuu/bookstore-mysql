@@ -193,3 +193,41 @@ class Buyer(db_conn.DBConn):
             return 530, "{}".format(str(e))
 
         return 200, "ok"
+
+    def receive_order(self, user_id: str, password: str, order_id: str):
+        try:
+            self.cur.execute(
+                "SELECT password from user where user_id=%s", (user_id,)
+            )
+            row = self.cur.fetchone()
+            if row is None:
+                return error.error_authorization_fail()
+            if password != row[0]:
+                return error.error_authorization_fail()
+
+            self.cur.execute(
+                "SELECT order_id, status FROM new_order WHERE order_id = %s",
+                (order_id,),
+            )
+            row = self.cur.fetchone()
+            if row is None:
+                return error.error_invalid_order_id(order_id)
+
+            status = row[1]
+            if status == "已完成":
+                return 523, {"已收货"}
+            elif status == "待发货" or status == "待支付":
+                return 524, {"请等待快递送出"}
+
+            self.cur.execute(
+                "UPDATE new_order SET status = %s, completion_time=%s"
+                "WHERE order_id = %s",
+                ('已完成', datetime.now().strftime('%Y-%m-%d %H:%M:%S'), order_id),
+            )
+            self.cur.connection.commit()
+
+        except pymysql.Error as e:
+            return 528, "{}".format(str(e))
+        except BaseException as e:
+            return 530, "{}".format(str(e))
+        return 200, "ok"
