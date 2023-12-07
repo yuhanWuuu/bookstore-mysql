@@ -325,3 +325,36 @@ class Buyer(db_conn.DBConn):
         except BaseException as e:
             return 530, "{}".format(str(e)), ""
         return 200, "ok", orders
+
+    def search_books(self, store_id: str, title: str, tags: str, content: str):
+        try:
+            store_id = '%' + store_id + '%'
+            title = '%' + title + '%'
+            tags = '%' + tags + '%'
+            content = '%' + content + '%'
+
+            self.cur.execute(
+                "SELECT store_id, book_id, book_info FROM store "
+                "WHERE store_id LIKE %s "
+                "AND JSON_EXTRACT(book_info, '$.title') LIKE %s "
+                "AND JSON_EXTRACT(book_info, '$.tags') LIKE %s "
+                "AND JSON_EXTRACT(book_info, '$.content') LIKE %s ",
+                (store_id, title, tags, content)
+            )
+
+            books = []
+            
+            for row in self.cur.fetchall():
+                info = json.loads(row[2])
+                btitle = info['title']
+                books.append({
+                    'store_id': row[0],
+                    'book_id': row[1],
+                    'title': btitle
+                })
+
+        except pymysql.Error as e:
+            return 528, "{}".format(str(e)), ""
+        except BaseException as e:
+            return 530, "{}".format(str(e)), ""
+        return 200, "ok", books
