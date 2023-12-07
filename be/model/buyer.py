@@ -286,3 +286,42 @@ class Buyer(db_conn.DBConn):
         except BaseException as e:
             return 530, "{}".format(str(e))
         return 200, "ok"
+
+    def view_order_history(self, user_id: str, password: str):
+        try:
+            self.cur.execute(
+                "SELECT password from user where user_id=%s", (user_id,)
+            )
+            row = self.cur.fetchone()
+            if row is None:
+                return error.error_authorization_fail()
+            if password != row[0]:
+                return error.error_authorization_fail()
+
+            self.cur.execute(
+                "SELECT order_id,status,completion_time from new_order where user_id=%s", (user_id,)
+            )
+            rows = self.cur.fetchall()
+            orders = []
+            for row in rows:
+                order_id = row[0]
+                status = row[1]
+                completion_time = row[2]
+                o = {
+                    'order_id': order_id,
+                    'status': status,
+                    'completion_time': completion_time,
+                    'books': []
+                }
+                self.cur.execute(
+                    "SELECT book_id,count,price from new_order_detail where order_id=%s", (order_id,)
+                )
+                for b in self.cur.fetchall():
+                    o['books'].append([b[0], b[1], b[2]])
+
+                orders.append(o)
+        except pymysql.Error as e:
+            return 528, "{}".format(str(e)), ""
+        except BaseException as e:
+            return 530, "{}".format(str(e)), ""
+        return 200, "ok", orders

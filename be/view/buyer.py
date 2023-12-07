@@ -42,7 +42,6 @@ def add_funds():
     return jsonify({"message": message}), code
 
 
-
 @bp_buyer.route("/receive_goods", methods=["POST"])
 def receive_goods():
     user_id = request.json.get("user_id")
@@ -68,24 +67,30 @@ def view_order_history():
     user_id = request.json.get("user_id")
     password = request.json.get("password")
     b = Buyer()
-    code, message, orders = b.view_order_history(user_id=user_id, password=password)
-    return jsonify({"message": message, "orders": orders}), code
+    res = b.view_order_history(user_id=user_id, password=password)
+    if len(res) == 3:
+        code, message, orders = res
+        return jsonify({"message": message, "orders": orders}), code
+    else:
+        code, message = res
+        return jsonify({"message": message}), code
+
 
 
 @bp_buyer.route("/search_books", methods=["POST"])
 def search_books():
-   store_id = request.json.get("store_id")
-   title = request.json.get("title")
-   tags = request.json.get("tags")
-   content = request.json.get("content")
-   if not store_id:
-       store_id = ''
-   if not title:
-       title = ''
-   if not tags:
-       tags = ''
-   if not content:
-       content = ''
-   b = Buyer()
-   code, message, books = b.search_books(store_id=store_id, title=title, tags=tags, content=content)
-   return jsonify({"message": message, "books": books}), code
+    store_id = request.json.get("store_id")
+    title = request.json.get("title")
+    tags = request.json.get("tags")
+    content = request.json.get("content")
+    if not store_id:
+        store_id = ''
+    if not title:
+        title = ''
+    if not tags:
+        tags = ''
+    if not content:
+        content = ''
+    b = Buyer()
+    code, message, books = b.search_books(store_id=store_id, title=title, tags=tags, content=content)
+    return jsonify({"message": message, "books": books}), code
