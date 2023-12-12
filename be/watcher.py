@@ -53,5 +53,6 @@ schedule.every().hour.do(delete_expired_data)
 
 # 保持程序运行
 while True:
+    print("run")
     schedule.run_pending()
     time.sleep(1)
