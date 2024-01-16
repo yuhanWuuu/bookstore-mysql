@@ -23,6 +23,9 @@ class Buyer(db_conn.DBConn):
                 return error.error_non_exist_store_id(store_id) + (order_id,)
             uid = "{}_{}_{}".format(user_id, store_id, str(uuid.uuid1()))
 
+            # 事务处理
+            self.cur.connection.begin()
+
             for book_id, count in id_and_count:
                 self.cur.execute(
                     "SELECT book_id, stock_level, book_info FROM store "
@@ -31,6 +34,7 @@ class Buyer(db_conn.DBConn):
                 )
                 row = self.cur.fetchone()
                 if row is None:
+                    self.cur.connection.rollback()
                     return error.error_non_exist_book_id(book_id) + (order_id,)
 
                 stock_level = row[1]
@@ -39,6 +43,7 @@ class Buyer(db_conn.DBConn):
                 price = book_info_json.get("price")
 
                 if stock_level < count:
+                    self.cur.connection.rollback()
                     return error.error_stock_level_low(book_id) + (order_id,)
 
                 self.cur.execute(
@@ -47,6 +52,7 @@ class Buyer(db_conn.DBConn):
                     (count, store_id, book_id, count),
                 )
                 if self.cur.rowcount == 0:
+                    self.cur.connection.rollback()
                     return error.error_stock_level_low(book_id) + (order_id,)
 
                 self.cur.execute(
@@ -61,6 +67,7 @@ class Buyer(db_conn.DBConn):
                 (uid, store_id, user_id, "待支付", None, datetime.now() + timedelta(hours=1)),
             )
             self.cur.connection.commit()
+
             order_id = uid
         except pymysql.Error as e:
             logging.info("528, {}".format(str(e)))
@@ -130,12 +137,16 @@ class Buyer(db_conn.DBConn):
             if balance < total_price:
                 return error.error_not_sufficient_funds(order_id)
 
+            # 事务处理
+            cur.connection.begin()
+
             cur.execute(
                 "UPDATE user set balance = balance - %s "
                 "WHERE user_id = %s AND balance >= %s ",
                 (total_price, buyer_id, total_price),
             )
             if cur.rowcount == 0:
+                cur.connection.rollback()
                 return error.error_not_sufficient_funds(order_id)
 
             # 更新状态
@@ -144,18 +155,6 @@ class Buyer(db_conn.DBConn):
                 "WHERE order_id = %s ",
                 ('待发货', None, order_id),
             )
-
-            # cur.execute(
-            #     "DELETE FROM new_order WHERE order_id = %s ", (order_id,)
-            # )
-            # if cur.rowcount == 0:
-            #     return error.error_invalid_order_id(order_id)
-            #
-            # cur.execute(
-            #     "DELETE FROM new_order_detail where order_id = %s ", (order_id,)
-            # )
-            # if cur.rowcount == 0:
-            #     return error.error_invalid_order_id(order_id)
 
             cur.connection.commit()
 
@@ -170,7 +169,7 @@ class Buyer(db_conn.DBConn):
     def add_funds(self, user_id, password, add_value) -> (int, str):
         try:
             self.cur.execute(
-                "SELECT password  from user where user_id=%s", (user_id,)
+                "SELECT password from user where user_id=%s", (user_id,)
             )
             row = self.cur.fetchone()
             if row is None:
@@ -261,6 +260,9 @@ class Buyer(db_conn.DBConn):
                 (order_id,),
             )
 
+            # 事务处理
+            self.cur.connection.begin()
+
             for row in self.cur.fetchall():
                 book_id = row[0]
                 count = row[1]
@@ -269,7 +271,6 @@ class Buyer(db_conn.DBConn):
                     "WHERE store_id=%s AND book_id=%s ",
                     (count, store_id, book_id),
                 )
-            self.cur.connection.commit()
 
             self.cur.execute(
                 "DELETE FROM new_order_detail WHERE order_id=%s;",
@@ -279,6 +280,7 @@ class Buyer(db_conn.DBConn):
                 "DELETE FROM new_order WHERE order_id=%s;",
                 (order_id,),
             )
+
             self.cur.connection.commit()
 
         except pymysql.Error as e:
@@ -343,14 +345,18 @@ class Buyer(db_conn.DBConn):
             )
 
             books = []
-            
+
             for row in self.cur.fetchall():
                 info = json.loads(row[2])
                 btitle = info['title']
+                btags = info['tags']
+                bcontent = info['content']
                 books.append({
                     'store_id': row[0],
                     'book_id': row[1],
-                    'title': btitle
+                    'title': btitle,
+                    # 'tags': btags,
+                    # 'content': bcontent
                 })
 
         except pymysql.Error as e:

@@ -5,12 +5,13 @@ from datetime import datetime
 
 
 def delete_expired_data():
+    print('run')
     db = pymysql.connect(host='localhost', user='root', passwd='root', port=3306, database='bookstore')
     cursor = db.cursor()
 
     search_query = """
         SELECT order_id, store_id FROM new_order
-        WHERE TTL IS NOT NULL 
+        WHERE TTL IS NOT NULL
         AND TTL < %s
     """
     cursor.execute(
@@ -18,6 +19,7 @@ def delete_expired_data():
     )
 
     for order_id, store_id in cursor.fetchall():
+        print(order_id)
         cursor.execute(
             "SELECT book_id, count FROM new_order_detail WHERE order_id = %s",
             (order_id,),
@@ -27,8 +29,8 @@ def delete_expired_data():
             count = row[1]
             update_query = """
                 UPDATE store SET stock_level = stock_level + %s
-                WHERE store_id = %s 
-                AND book_id = %s 
+                WHERE store_id = %s
+                AND book_id = %s
             """
             cursor.execute(
                 update_query, (count, store_id, book_id),
@@ -53,6 +55,5 @@ schedule.every().hour.do(delete_expired_data)
 
 # 保持程序运行
 while True:
-    print("run")
     schedule.run_pending()
     time.sleep(1)
